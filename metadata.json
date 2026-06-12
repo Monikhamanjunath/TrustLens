@@ -1,0 +1,6 @@
+{
+  "name": "TrustLens: Forensic Content Authenticity Verifier",
+  "description": "AI Safeguards tool to inspect digital media for synthetic anomalies, deepfakes, and prompt manipulation.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

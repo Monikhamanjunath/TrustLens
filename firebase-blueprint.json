@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "ScanRecord": {
+      "title": "Forensic Scan Record",
+      "description": "Represents a completed forensic analysis scan for content authenticity verification.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique ID of the scan"
+        },
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Authentication UID of the owner"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Name of the analyzed file"
+        },
+        "fileType": {
+          "type": "string",
+          "description": "Type of media, e.g., image, audio, or text"
+        },
+        "fileSize": {
+          "type": "number",
+          "description": "Size of the file in bytes"
+        },
+        "is_synthetic_probability": {
+          "type": "number",
+          "description": "Calculated probability of the content being AI-generated or synthetic, from 0.0 to 1.0"
+        },
+        "primary_classification": {
+          "type": "string",
+          "description": "Overall integrity check classification: Authentic, Suspected AI-Generated, or Jailbreak Attempt"
+        },
+        "detected_artifacts": {
+          "type": "array",
+          "description": "Array of strings describing suspected anomaly markers or deepfake details"
+        },
+        "visual_bounding_boxes": {
+          "type": "array",
+          "description": "JSON serializable array of detected anomalies with x_min, y_min, x_max, y_max and label"
+        },
+        "audio_anomalies": {
+          "type": "array",
+          "description": "JSON serializable array of audio time ranges with start_time, end_time, reason"
+        },
+        "content_analysis": {
+          "type": "string",
+          "description": "Detailed notes or analysis summary for the content (or highlighted text sentences)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when this scan was conducted"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "fileName",
+        "fileType",
+        "fileSize",
+        "is_synthetic_probability",
+        "primary_classification",
+        "detected_artifacts",
+        "createdAt"
+      ]
+    },
+    "UserPreference": {
+      "title": "User Configurations",
+      "description": "Preferences and risk assessment levels set by the security operator.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The Firebase UID of the user"
+        },
+        "analysisSensitivity": {
+          "type": "string",
+          "description": "Required scan strictness: high, medium, low"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": [
+        "userId",
+        "analysisSensitivity",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/scans/{scanId}": {
+      "schema": "ScanRecord",
+      "description": "A collection of individual forensic verification results."
+    },
+    "/preferences/{userId}": {
+      "schema": "UserPreference",
+      "description": "A collection of user custom sensitivity controls."
+    }
+  }
+}

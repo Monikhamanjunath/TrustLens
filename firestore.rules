@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net Default-Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitive ABAC authorization and validation helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true || 
+        request.auth.token.firebase.sign_in_provider == 'google.com' ||
+        request.auth.token.firebase.sign_in_provider == 'password'
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. ScanRecord Validation Blueprint
+    function isValidScanRecord(data) {
+      return data.keys().hasAll(['id', 'userId', 'fileName', 'fileType', 'fileSize', 'is_synthetic_probability', 'primary_classification', 'detected_artifacts', 'createdAt'])
+        && data.keys().size() <= 12 // Optional fields: visual_bounding_boxes, audio_anomalies, content_analysis
+        && data.id is string && data.id.size() <= 128
+        && data.userId == request.auth.uid
+        && data.fileName is string && data.fileName.size() <= 256
+        && data.fileType is string && data.fileType.size() <= 128
+        && data.fileSize is int && data.fileSize > 0
+        && (data.is_synthetic_probability is float || data.is_synthetic_probability is int)
+        && data.is_synthetic_probability >= 0.0 && data.is_synthetic_probability <= 1.0
+        && data.primary_classification is string && (data.primary_classification == 'Authentic' || data.primary_classification == 'Suspected AI-Generated' || data.primary_classification == 'Jailbreak Attempt')
+        && data.detected_artifacts is list && data.detected_artifacts.size() <= 50
+        && data.createdAt == request.time;
+    }
+
+    // Scans collection match block
+    match /scans/{scanId} {
+      allow create: if isVerifiedUser() && isValidId(scanId) && isValidScanRecord(incoming());
+      allow get: if isVerifiedUser() && isValidId(scanId) && resource.data.userId == request.auth.uid;
+      allow list: if isVerifiedUser() && resource.data.userId == request.auth.uid;
+      allow update, delete: if false; // Historical logs are write-once and immutable
+    }
+
+    // 2. UserPreference Validation Blueprint
+    function isValidPreference(data) {
+      return data.keys().hasAll(['userId', 'analysisSensitivity', 'updatedAt'])
+        && data.keys().size() == 3
+        && data.userId == request.auth.uid
+        && data.analysisSensitivity is string && (data.analysisSensitivity == 'low' || data.analysisSensitivity == 'medium' || data.analysisSensitivity == 'high')
+        && data.updatedAt == request.time;
+    }
+
+    // Preferences collection match block
+    match /preferences/{userId} {
+      allow create, update: if isVerifiedUser() && userId == request.auth.uid && isValidPreference(incoming());
+      allow get: if isVerifiedUser() && userId == request.auth.uid;
+      allow list, delete: if false; // Direct keys lookup only
+    }
+  }
+}
